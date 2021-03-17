@@ -1,0 +1,248 @@
+---
+title: "CS544_project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+insurance <- read.csv("insurance.csv")
+
+## Data Summary 
+
+cat.variables <- insurance[,c("sex", "smoker")]
+num.variables <- insurance[,c("age", "bmi")]
+
+# summary for univariate categorical variable (sex, smoker)
+
+# numerically
+
+sex_table = table(cat.variables$sex) # frequency count table for sex
+sex_prop.table = prop.table(sex_table) # proportion table for sex
+
+smoker_table = table(cat.variables$smoker) # frequency count table for smoker
+smoker_prop.table = prop.table(smoker_table) # proportion table for smoker
+
+```
+
+```{r}
+# graphically
+
+# barplot for gender
+ggplot(insurance, aes(x = sex)) + geom_bar() + 
+        ggtitle("Barplot to show the gender distribution")
+```
+
+
+```{r}
+# pie chart for smoker status
+pie(smoker_table, labels = paste0(names(smoker_prop.table), " (", round(100*as.numeric(smoker_prop.table)), "%)"),
+    main = "Distribution of Smoker Status")
+```
+
+```{r}
+# summary for single numerical variable (age, hmi)
+
+numerical_summary = with(num.variables, data.frame(rbind(c(fivenum(age), mean(age), sd(age)), 
+                                                         c(fivenum(bmi), mean(bmi), sd(bmi)))))
+colnames(numerical_summary) <- c("Min", "Q1", "median", 'Q3', "Max", "Mean", "SD")
+row.names(numerical_summary) <- c("age", "bmi")
+numerical_summary
+
+numerical_df = data.frame(Variable = rep(c("age", "bmi"), each = nrow(num.variables)), 
+           value = unlist(c(num.variables)))
+```
+
+```{r}
+# boxplot and histogram for age and bmi
+g1 = ggplot(numerical_df[numerical_df$Variable == "age",]) + 
+        aes(x = Variable, y = value) + geom_boxplot() + 
+        xlab("") + ggtitle("Boxplot of Age")
+g2 = ggplot(numerical_df[numerical_df$Variable == "bmi",]) + 
+        aes(x = Variable, y = value) + geom_boxplot() + 
+        xlab("") + ggtitle("Boxplot of BMI")
+
+g3 = ggplot(numerical_df[numerical_df$Variable == "age",]) + 
+        aes(x = value) + geom_histogram() + 
+        ggtitle("Histogram of Age Distribution")
+
+g4 = ggplot(numerical_df[numerical_df$Variable == "bmi",]) + 
+        aes(x = value) + geom_histogram() +
+        ggtitle("Histogram of BMI Distribution")
+
+grid.arrange(g1,g2,g3,g4, nrow=2)
+```
+
+```{r}
+# summary for bivariate categorical variable (sex, smoker)
+
+# show flat table 
+cat.table = table(cat.variables)
+margin.table(cat.table, 1)
+margin.table(cat.table, 2)
+f.cat.table = ftable(addmargins(cat.table))
+f.cat.table
+```
+
+```{r}
+# mosaicplot
+mosaicplot(t(cat.table), col = c("red", "blue"), 
+           main = "Mosaic Plot of Gender against Smoker, conditional on Smoker") 
+```
+
+```{r}
+# summary for bivariate numerical variable (age, bmi)
+
+with(num.variables, cor(age, bmi))
+ggplot(num.variables, aes(x = age, y = bmi)) + geom_point() + 
+        ggtitle("Scatterplot of BMI against Age")
+```
+
+```{r}
+## Applicability of Central Limit Theorem
+
+# small sample case
+B = 100
+n = c(20, 50, 100, 1000)
+set.seed(2020)
+list_xbars_by_n = lapply(n, function(y) sapply(1:B, function(x) mean(sample(num.variables$age, size = y))))
+names(list_xbars_by_n) = paste0('n=',n)
+
+g1 = ggplot(data.frame(x = list_xbars_by_n[[1]])) +
+    aes(x = x) + geom_histogram(aes(y = ..density..)) +
+    xlab("") + ggtitle("Sampling Distribution of Sample Mean of Age with n = 20, B = 100") 
+
+g2 = ggplot(data.frame(x = list_xbars_by_n[[2]])) +
+    aes(x = x) + geom_histogram(aes(y = ..density..)) +
+    xlab("") + ggtitle("Sampling Distribution of Sample Mean of Age with n = 50, B = 100") 
+
+g3 = ggplot(data.frame(x = list_xbars_by_n[[3]])) +
+    aes(x = x) + geom_histogram(aes(y = ..density..)) +
+    xlab("") + ggtitle("Sampling Distribution of Sample Mean of Age with n = 100, B = 100") 
+
+g4 = ggplot(data.frame(x = list_xbars_by_n[[4]])) +
+    aes(x = x) + geom_histogram(aes(y = ..density..)) +
+    xlab("") + ggtitle("Sampling Distribution of Sample Mean of Age with n = 1000, B = 100") 
+
+grid.arrange(g1,g2,g3,g4, nrow=2)
+```
+
+```{r}
+# large sample
+B = 10000
+n = c(20, 50, 100, 1000)
+set.seed(2020)
+list_xbars_by_n = lapply(n, function(y) sapply(1:B, function(x) mean(sample(num.variables$age, size = y))))
+names(list_xbars_by_n) = paste0('n=',n)
+
+
+g1 = ggplot(data.frame(x = list_xbars_by_n[[1]])) +
+    aes(x = x) + geom_histogram(aes(y = ..density..)) +
+    xlab("") + ggtitle("Sampling Distribution of Sample Mean of Age with n = 20, B = 10000") 
+
+g2 = ggplot(data.frame(x = list_xbars_by_n[[2]])) +
+    aes(x = x) + geom_histogram(aes(y = ..density..)) +
+    xlab("") + ggtitle("Sampling Distribution of Sample Mean of Age with n = 50, B = 10000") 
+
+g3 = ggplot(data.frame(x = list_xbars_by_n[[3]])) +
+    aes(x = x) + geom_histogram(aes(y = ..density..)) +
+    xlab("") + ggtitle("Sampling Distribution of Sample Mean of Age with n = 100, B = 10000") 
+
+g4 = ggplot(data.frame(x = list_xbars_by_n[[4]])) +
+    aes(x = x) + geom_histogram(aes(y = ..density..)) +
+    xlab("") + ggtitle("Sampling Distribution of Sample Mean of Age with n = 1000, B = 10000") 
+
+grid.arrange(g1,g2,g3,g4, nrow=2)
+```
+
+```{r}
+## Sampling methods
+
+library(sampling)
+set.seed(1234)
+
+n = 100
+
+# SRSWOR
+
+insurance_srswor = insurance[srswor(n, nrow(insurance)) == 1,]
+
+# systematic sampling 
+
+N = nrow(insurance)
+n = 100
+k <- ceiling(N/n)
+k # 14
+r <- sample(k, 1)
+r # 10
+s <- seq(r, by = k, length = n)
+insurance_systematic = insurance[s,]
+
+na.idx = which(is.na(insurance_systematic$age))
+m = length(na.idx)
+new_index = (s[na.idx] - nrow(insurance))[1:m]
+insurance_systematic[96:100,] = insurance[new_index,]
+
+# systematic sampling with unequal probabilities, calculate the inclusion probabilities using the Age
+
+pik <- inclusionprobabilities(insurance$age, n)
+s <- UPsystematic(pik)
+insurance_systematic_equal_prob = insurance[s == 1,]
+
+# stratified sample using proportional sizes based on the smoking status (smoker vs non-smoker) 
+
+insurance <- insurance[order(insurance$smoker),]
+strata_size <- round(round(prop.table(table(insurance$smoker))*n,1))
+st.insurance <- strata(insurance, stratanames = "smoker", size = strata_size, method = "srswor")
+insurance_systematic_unequal_prob <- getdata(insurance, st.insurance)
+
+# summarize the result, compare it to the mean bmi from the data
+c(mean(insurance$bmi), 
+  mean(insurance_srswor$bmi), 
+  mean(insurance_systematic$bmi), 
+  mean(insurance_systematic_equal_prob$bmi), 
+  mean(insurance_systematic_unequal_prob$bmi))
+```
+
+```{r}
+## Regression
+
+insurance2 = insurance
+insurance2$charges = log(insurance$charges)
+names(insurance2)[7] = "lnCharge"
+
+par(mfrow=c(1,2))
+hist(insurance$charges, main = "Histogram of Insurance Charges", xlab = "charge")
+hist(insurance2$lnCharge, main = "Histogram of log of Insurance Charges", xlab = "log(charge)")
+```
+
+```{r}
+fit0 = lm(lnCharge ~ .,  data = insurance2)
+summary(fit0)
+```
+
+```{r}
+# use all subset selections
+library(leaps)
+all_models <- regsubsets(lnCharge ~ .,  data = insurance2, nbest = 1)
+all_models_summary = summary(all_models)
+attributes(all_models_summary)
+```
+
+```{r}
+# best model by BIC: (Age, BMI, Children, Smoker)
+all_models_summary$which[which.min(all_models_summary$bic),]
+```
+
+```{r}
+# final model
+fit1 = lm(lnCharge ~ .,  data = insurance2)
+summary(fit1)
+```
